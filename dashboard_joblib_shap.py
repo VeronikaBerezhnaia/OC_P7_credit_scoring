@@ -3,6 +3,7 @@ import streamlit as st
 import requests
 
 import matplotlib.pyplot as plt
+import numpy as np
 import shap
 import joblib
 import sklearn # if is needed for using columntransformer methods
@@ -89,16 +90,21 @@ def main():
     CODE_GENDER = st.text_input('Gender of the client: please enter M for masculin or F for feminin', 'M')
 
 
+    columns = ["NAME_INCOME_TYPE", "AMT_ANNUITY", "EXT_SOURCE_1", "EXT_SOURCE_2", "EXT_SOURCE_3", "DAYS_EMPLOYED_PERC", "CREDIT_TERM", 
+    "STATUS_0_SUM", "STATUS_1_SUM", "STATUS_2_SUM", "STATUS_3_SUM", "STATUS_4_SUM", "STATUS_5_SUM", "STATUS_C_SUM", "STATUS_X_SUM", 
+    "CREDIT_ACTIVE_Active_SUM", "CREDIT_ACTIVE_Bad_debt_SUM", "CREDIT_ACTIVE_Closed_SUM", "CREDIT_ACTIVE_Sold_SUM", "CREDIT_TYPE_Another_type_of_loan_SUM", "CREDIT_TYPE_Cash_loan_(non-earmarked)_SUM", "CREDIT_TYPE_Consumer_credit_SUM", "CREDIT_TYPE_Credit_card_SUM", "CREDIT_TYPE_Microloan_SUM", "CREDIT_TYPE_Unknown_type_of_loan_SUM", 
+    "DAYS_BIRTH", "FLAG_EMP_PHONE", "FLAG_WORK_PHONE", "FLAG_PHONE", "REGION_RATING_CLIENT_W_CITY", "REG_CITY_NOT_LIVE_CITY", "REG_CITY_NOT_WORK_CITY", "LIVE_CITY_NOT_WORK_CITY", "FLAG_DOCUMENT_2", "FLAG_DOCUMENT_3", "FLAG_DOCUMENT_6", "FLAG_DOCUMENT_9", 
+    "FLAG_DOCUMENT_13", "FLAG_DOCUMENT_14", "FLAG_DOCUMENT_16", "FLAG_DOCUMENT_21", "F_AGE", "M_AGE", "CNT_ADULTS"]
+    
+    data = [[NAME_INCOME_TYPE, AMT_ANNUITY, EXT_SOURCE_1, EXT_SOURCE_2, EXT_SOURCE_3, DAYS_EMPLOYED/DAYS_BIRTH, AMT_CREDIT/AMT_ANNUITY, *[int(i == STATUS) for i in status_unique], *[int(i==CREDIT_ACTIVE) for i in credit_active_unique], *[int(i==CREDIT_TYPE) for i in credit_type_unique], 
+    DAYS_BIRTH, FLAG_EMP_PHONE, FLAG_WORK_PHONE, FLAG_PHONE, REGION_RATING_CLIENT_W_CITY, int(REG_CITY != LIVE_CITY), int(REG_CITY != WORK_CITY), int(LIVE_CITY != WORK_CITY), FLAG_DOCUMENT_2, FLAG_DOCUMENT_3, FLAG_DOCUMENT_6, FLAG_DOCUMENT_9, FLAG_DOCUMENT_13, FLAG_DOCUMENT_14, 
+    FLAG_DOCUMENT_16, FLAG_DOCUMENT_21, DAYS_BIRTH if CODE_GENDER == 'F' else 0, DAYS_BIRTH if CODE_GENDER == 'M' else 0, CNT_FAM_MEMBERS - CNT_CHILDREN]]
+    
+    data_for_shap = pd.DataFrame(data, columns=columns)
+        
     predict_btn = st.button('Predict')
     if predict_btn:
-        columns = ["NAME_INCOME_TYPE", "AMT_ANNUITY", "EXT_SOURCE_1", "EXT_SOURCE_2", "EXT_SOURCE_3", "DAYS_EMPLOYED_PERC", "CREDIT_TERM", 
-        "STATUS_0_SUM", "STATUS_1_SUM", "STATUS_2_SUM", "STATUS_3_SUM", "STATUS_4_SUM", "STATUS_5_SUM", "STATUS_C_SUM", "STATUS_X_SUM", 
-        "CREDIT_ACTIVE_Active_SUM", "CREDIT_ACTIVE_Bad_debt_SUM", "CREDIT_ACTIVE_Closed_SUM", "CREDIT_ACTIVE_Sold_SUM", "CREDIT_TYPE_Another_type_of_loan_SUM", "CREDIT_TYPE_Cash_loan_(non-earmarked)_SUM", "CREDIT_TYPE_Consumer_credit_SUM", "CREDIT_TYPE_Credit_card_SUM", "CREDIT_TYPE_Microloan_SUM", "CREDIT_TYPE_Unknown_type_of_loan_SUM", 
-        "DAYS_BIRTH", "FLAG_EMP_PHONE", "FLAG_WORK_PHONE", "FLAG_PHONE", "REGION_RATING_CLIENT_W_CITY", "REG_CITY_NOT_LIVE_CITY", "REG_CITY_NOT_WORK_CITY", "LIVE_CITY_NOT_WORK_CITY", "FLAG_DOCUMENT_2", "FLAG_DOCUMENT_3", "FLAG_DOCUMENT_6", "FLAG_DOCUMENT_9", 
-        "FLAG_DOCUMENT_13", "FLAG_DOCUMENT_14", "FLAG_DOCUMENT_16", "FLAG_DOCUMENT_21", "F_AGE", "M_AGE", "CNT_ADULTS"]
-        data = [[NAME_INCOME_TYPE, AMT_ANNUITY, EXT_SOURCE_1, EXT_SOURCE_2, EXT_SOURCE_3, DAYS_EMPLOYED/DAYS_BIRTH, AMT_CREDIT/AMT_ANNUITY, *[int(i == STATUS) for i in status_unique], *[int(i==CREDIT_ACTIVE) for i in credit_active_unique], *[int(i==CREDIT_TYPE) for i in credit_type_unique], 
-        DAYS_BIRTH, FLAG_EMP_PHONE, FLAG_WORK_PHONE, FLAG_PHONE, REGION_RATING_CLIENT_W_CITY, int(REG_CITY != LIVE_CITY), int(REG_CITY != WORK_CITY), int(LIVE_CITY != WORK_CITY), FLAG_DOCUMENT_2, FLAG_DOCUMENT_3, FLAG_DOCUMENT_6, FLAG_DOCUMENT_9, FLAG_DOCUMENT_13, FLAG_DOCUMENT_14, 
-        FLAG_DOCUMENT_16, FLAG_DOCUMENT_21, DAYS_BIRTH if CODE_GENDER == 'F' else 0, DAYS_BIRTH if CODE_GENDER == 'M' else 0, CNT_FAM_MEMBERS - CNT_CHILDREN]]
+
         pred = None
 
   #      if api_choice == 'MLflow':
@@ -149,21 +155,24 @@ def main():
     st.pyplot(fig)
     
     test_columntransformer = joblib.load('credit_scoring_transformer.pkl')
-    X_test_trfm = test_columntransformer.transform(X_train)
+    X_test_trfm = test_columntransformer.transform(data_for_shap)
     st.write('Shape of data for shap:', X_test_trfm.shape)
     shap_feature_names = test_columntransformer.get_feature_names_out()
-    
+#    st.write(shap_feature_names.shape)
+#    st.write(shap_feature_names)
     linear_explainer = joblib.load(filename='explainer.bz2')
     shap_vals = linear_explainer.shap_values(X_test_trfm[0])
     st.write("Prediction From Adding SHAP Values to Base Value:", linear_explainer.expected_value + shap_vals.sum())
     
-    st.pyplot(shap.decision_plot(linear_explainer.expected_value,
+    fig_shap = plt.figure()
+    st.pyplot(fig_shap, shap.decision_plot(linear_explainer.expected_value,
                    linear_explainer.shap_values(X_test_trfm[0]),
-                    feature_names=shap_feature_names, # TypeError: The feature_names arg requires a list or numpy array.
-#                     feature_names=shap_feature_names.tolist(), #AttributeError: 'list' object has no attribute 'tolist'
-                   matplotlib=True # https://discuss.streamlit.io/t/shap-shap-force-plot-on-streamlit/10071/2  Oct '21
+#                    feature_names=shap_feature_names, # TypeError: The feature_names arg requires a list or numpy array.
+                     feature_names=shap_feature_names.tolist(), #AttributeError: 'list' object has no attribute 'tolist'
+#                   matplotlib=True # https://discuss.streamlit.io/t/shap-shap-force-plot-on-streamlit/10071/2  Oct '21
                    ))
- # another workaround see on https://gist.github.com/andfanilo/6bad569e3405c89b6db1df8acf18df0e   
-    
+# another workaround see on https://gist.github.com/andfanilo/6bad569e3405c89b6db1df8acf18df0e   
+# another workaround see on https://discuss.streamlit.io/t/display-shap-diagrams-with-streamlit/1029/9
+
 if __name__ == '__main__':
     main()
