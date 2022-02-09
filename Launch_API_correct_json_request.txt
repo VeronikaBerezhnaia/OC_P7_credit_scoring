@@ -1,0 +1,34 @@
+How to launch an API (the model serving in the command prompt) and send a request to the API (through your Jupiter Notebook, through a command prompt or through a dashboard):
+Please read the manual to the end before going to action and executing the commands.
+
+You have saved you model with the chosen library (say, MLFlow with mlflow.sklearn.save_model(model, name, signature)).
+Now you run your model on a server/computer. In our training case this is your own computer.
+Open your command prompt.
+I use Anaconda Prompt, but you may use Windows command prompt or Linux command prompt as well. In latter cases some commands will probably be different. For instance, Anaconda prompt recognizes cd as "change directory", put doesnt recognize pwd as "print working directory" or ls as "list files in a directory" (use dir instead) etc.
+So, in anaconda prompt you type mlflow models serve -m mlflow_model/   where mlflow_model stands for the name of the folder where you saved your model.
+The file that is actually running on the backend is model.pkl, created at save_model command.
+The models module creates a backend for flavor "python function" (flavor means sort, type, kind, etc.).
+Than you receive a response where your model serves. It includes a host(server/computer, in our cases it's your own computer, so the link on itself is 127.0.0.1 for any server/computer), a port(number/address/entry for sending requests to a specific program on that computer) and an identifier.
+To use this model, you open a NEW WINDOW in anaconda prompt. Just call it one more time from a starting menu and open a new window. In Linux shell apparently you can type Ctrl+Z to put the model to the background and then make the requests from the same window, but in anaconda prompt - no.
+In this new window you have to make a request to the model, and the model should return you just the number, 0 or 1.
+An example of such a request:
+curl http://127.0.0.1:5000/invocations -H 'Content-Type: application/json' -d '{"data": [[1, 2, 3, 4, 5, 6, 7, 8]]}'
+WARNING THIS REQUEST IS NOT COMPLETE: it misses "columns" key in -d parameter.
+WARNING THIS REQUEST IS NOT COMPLETE: here you send only integers, but if send float point number like '0.' or '1.' the command prompt rises an error. But it's ok if you send '0.0' or '1.0'.
+For sending a request to the API (with command curl) you will need all the names of all the columns and also all the values.
+Anyway, in the example request, curl is the command, 127.0.0.1 is the computer, 5000 is the entry for a specific program on that computer, -H tells how to read/decode the data, -d sends the necessary data.
+
+Now HOW TO EXTRACT AND INSERT COLUMNS NAMES:
+Your model has many columns, probably about 200 (without variables filtering). Even with filtering it can be up to 50 columns.
+Extract the column names from the signature of the model (find in folder mlflow_model, file MLmodel.
+Edit the punctuations in a text redactor with replace method.
+Note that (at least in anaconda prompt) for sending json files you need only double quotes EVERYWHERE, not single quotes NOWHERE. Any single quote, in -H parameter or in -d parameter, would be rejected as an error.
+All your request after -d option is one string that you transfer to the model. So for all the internal variables you need to put a backslash before the quotemark.
+The request for a "sandbox model" with only 3 variables looks like that:
+
+
+curl http://127.0.0.1:5000/invocations -H "Content-Type: application/json" -d "{\"columns\": [\"NAME_INCOME_TYPE\", \"FLAG_EMP_PHONE\", \"AMT_CREDIT\"], \"data\":[[\"Working\", 1, 12]]}"
+
+now my request, which contains 44 columns and 44 values. please note you should write everything on one line, making a new line will invoke an error.
+! curl http://127.0.0.1:5000/invocations -H "Content-Type: application/json" -d "{\"columns\": [\"NAME_INCOME_TYPE\", \"AMT_ANNUITY\", \"EXT_SOURCE_1\", \"EXT_SOURCE_2\", \"EXT_SOURCE_3\", \"DAYS_EMPLOYED_PERC\", \"CREDIT_TERM\", \"STATUS_0_SUM\", \"STATUS_1_SUM\", \"STATUS_2_SUM\", \"STATUS_3_SUM\", \"STATUS_4_SUM\", \"STATUS_5_SUM\", \"STATUS_C_SUM\", \"STATUS_X_SUM\", \"CREDIT_ACTIVE_Active_SUM\", \"CREDIT_ACTIVE_Bad_debt_SUM\", \"CREDIT_ACTIVE_Closed_SUM\", \"CREDIT_ACTIVE_Sold_SUM\", \"CREDIT_TYPE_Another_type_of_loan_SUM\", \"CREDIT_TYPE_Cash_loan_(non-earmarked)_SUM\", \"CREDIT_TYPE_Consumer_credit_SUM\", \"CREDIT_TYPE_Credit_card_SUM\", \"CREDIT_TYPE_Microloan_SUM\", \"CREDIT_TYPE_Unknown_type_of_loan_SUM\", \"DAYS_BIRTH\", \"FLAG_EMP_PHONE\", \"FLAG_WORK_PHONE\", \"FLAG_PHONE\", \"REGION_RATING_CLIENT_W_CITY\", \"REG_CITY_NOT_LIVE_CITY\", \"REG_CITY_NOT_WORK_CITY\", \"LIVE_CITY_NOT_WORK_CITY\", \"FLAG_DOCUMENT_2\", \"FLAG_DOCUMENT_3\", \"FLAG_DOCUMENT_6\", \"FLAG_DOCUMENT_9\", \"FLAG_DOCUMENT_13\", \"FLAG_DOCUMENT_14\", \"FLAG_DOCUMENT_16\", \"FLAG_DOCUMENT_21\", \"F_AGE\", \"M_AGE\", \"CNT_ADULTS\"], \"data\":[[\"Working\", 10, 0.1, 0.1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]]}"
+The response is [1.0]
