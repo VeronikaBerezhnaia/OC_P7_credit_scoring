@@ -63,7 +63,7 @@ def main():
     FLAG_PHONE = st.number_input('Did client provide home phone (again) (1=YES, 0=NO): enter 0 or 1',
                               min_value=0., max_value=1., value=0., step=1.)
     REGION_RATING_CLIENT_W_CITY = st.number_input('Our rating of the region where client lives with taking city into account (1,2,3)',
-                              min_value=0., max_value=1., value=0., step=1.)
+                              min_value=1., max_value=3., value=2., step=1.)
     REG_CITY = st.text_input('Registration city', 'Paris')
     LIVE_CITY = st.text_input('Live city', 'Paris')
     WORK_CITY = st.text_input('Work city', 'Paris')
@@ -158,6 +158,7 @@ def main():
     X_test_trfm = test_columntransformer.transform(data_for_shap)
     st.write('Shape of data for shap:', X_test_trfm.shape)
     shap_feature_names = test_columntransformer.get_feature_names_out()
+    shap_feature_names = [x.replace('standardscaler__', '').replace('onehotencoder__', '') for x in shap_feature_names]
 #    st.write(shap_feature_names.shape)
 #    st.write(shap_feature_names)
     linear_explainer = joblib.load(filename='explainer.bz2')
@@ -167,8 +168,8 @@ def main():
     fig_shap = plt.figure()
     st.pyplot(fig_shap, shap.decision_plot(linear_explainer.expected_value,
                    linear_explainer.shap_values(X_test_trfm[0]),
-#                    feature_names=shap_feature_names, # TypeError: The feature_names arg requires a list or numpy array.
-                     feature_names=shap_feature_names.tolist(), #AttributeError: 'list' object has no attribute 'tolist'
+                    feature_names=shap_feature_names, # TypeError: The feature_names arg requires a list or numpy array.
+#                     feature_names=shap_feature_names.tolist(), #AttributeError: 'list' object has no attribute 'tolist'
 #                   matplotlib=True # https://discuss.streamlit.io/t/shap-shap-force-plot-on-streamlit/10071/2  Oct '21
                    ))
 # another workaround see on https://gist.github.com/andfanilo/6bad569e3405c89b6db1df8acf18df0e   
