@@ -2,12 +2,13 @@ import pandas as pd
 import streamlit as st
 import requests
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
+import matplotlib
 import numpy as np
 import shap
 import joblib
-import sklearn # if is needed for using columntransformer methods
-from seaborn import scatterplot
+#import sklearn # if is needed for using columntransformer methods
+#from seaborn import scatterplot
 
 def request_prediction(model_uri, columns, data):
     headers = {"Content-Type": "application/json"}
@@ -32,87 +33,125 @@ def main():
 
     st.title('Credit default prediction')
     
-    
-    plot_choice = st.sidebar.selectbox('Which plot do you want to display', ['Sex-age default probability', 
+    input_choice = st.sidebar.selectbox('How do you want to input the data?', ["Input just the client's number", "Input all values manually"], index=0)
+   
+    plot_choice = st.sidebar.selectbox('Which plot do you want to display?', ['Sex-age default probability', 
     'Sex-age distribution default cients', 
     'Employed vs credit amount scatterplot',
     'Decision plot for the individual client',
     'Global feature importances'], index=0)
-
-
-    NAME_INCOME_TYPE = st.selectbox('Select income type',
-        ('Working', 'State servant', 'Commercial associate', 'Pensioner', 'Unemployed', 'Student', 'Businessman', 'Maternity leave'))
-#    st.write('You selected:', option)
-    AMT_ANNUITY = st.number_input('Loan annuity	natural logarithm: enter any positive float number',
-                                   min_value=0., max_value=100., value=12., step=1.)
-    AMT_CREDIT = st.number_input('Credit amount of the loan	natural logarithm: enter any positive float number',
-                                   min_value=0., max_value=100., value=12., step=1.)
-    EXT_SOURCE_1 = st.number_input('Normalized score from external data source 1: enter any float number between 0 and 1',
-                                   min_value=0., max_value=1., value=0., step=1.)
-    EXT_SOURCE_2 = st.number_input('Normalized score from external data source 2: enter any float number between 0 and 1',
-                                   min_value=0., max_value=1., value=0., step=1.)
-    EXT_SOURCE_3 = st.number_input('Normalized score from external data source 3: enter any float number between 0 and 1',
-                                   min_value=0., max_value=1., value=0., step=1.)
-    DAYS_BIRTH = st.number_input('Client age in days at the time of application: enter any positive integer number',
-                                   min_value=0., max_value=50000., value=16500., step=1.)
-    DAYS_EMPLOYED = st.number_input('How many days before the application the person started current employment: enter any positive float number',
-                                   min_value=0., max_value=50000., value=0., step=1.)
-    status_unique = ['0', '1', '2', '3', '4', '5', 'C', 'X']
-    STATUS = st.selectbox('Status of Credit Bureau loan during the month: active, closed, DPD0-30. C means closed, X means status unknown, 0 means no DPD, 1 means maximal did during month between 1-30, 2 means DPD 31-60... 5 means DPD 120+ or sold or written off )', status_unique, index=7)
-    credit_active_unique = ['Active', 'Bad_debt', 'Closed', 'Sold']
-    CREDIT_ACTIVE = st.selectbox('Status of the Credit Bureau (CB) reported credits', ['No reported credits', *credit_active_unique]) # if there were no credits before or another issue
-    credit_type_unique = ["Another_type_of_loan", "Cash_loan_(non-earmarked)", "Consumer_credit", "Credit_card", "Microloan", "Unknown_type_of_loan",]
-    CREDIT_TYPE = st.selectbox('Type of Credit Bureau credit (Car, cash,...) For no reported credits select unknown type of loan', credit_type_unique) # eventually I can fill all the columns with 0 when no reported credits. then I do as with CREDIT_ACTIVE
-    FLAG_EMP_PHONE = st.number_input('Did client provide work phone (1=YES, 0=NO): enter 0 or 1',
-                              min_value=0., max_value=1., value=0., step=1.)
-    FLAG_WORK_PHONE = st.number_input('Did client provide home phone (1=YES, 0=NO): enter 0 or 1',
-                              min_value=0., max_value=1., value=0., step=1.)
-    FLAG_PHONE = st.number_input('Did client provide home phone (again) (1=YES, 0=NO): enter 0 or 1',
-                              min_value=0., max_value=1., value=0., step=1.)
-    REGION_RATING_CLIENT_W_CITY = st.number_input('Our rating of the region where client lives with taking city into account (1,2,3)',
-                              min_value=1., max_value=3., value=2., step=1.)
-    REG_CITY = st.text_input('Registration city', 'Paris')
-    LIVE_CITY = st.text_input('Live city', 'Paris')
-    WORK_CITY = st.text_input('Work city', 'Paris')
-    FLAG_DOCUMENT_2 = st.number_input('Did client provide document 2: enter 0 or 1', #
-                              min_value=0., max_value=1., value=0., step=1.)
-    FLAG_DOCUMENT_3 = st.number_input('Did client provide document 3: enter 0 or 1', #
-                              min_value=0., max_value=1., value=0., step=1.)
-    FLAG_DOCUMENT_6 = st.number_input('Did client provide document 6: enter 0 or 1', #
-                              min_value=0., max_value=1., value=0., step=1.)
-    FLAG_DOCUMENT_9 = st.number_input('Did client provide document 9: enter 0 or 1', #
-                              min_value=0., max_value=1., value=0., step=1.)
-    FLAG_DOCUMENT_13 = st.number_input('Did client provide document 13: enter 0 or 1', #
-                              min_value=0., max_value=1., value=0., step=1.)
-    FLAG_DOCUMENT_14 = st.number_input('Did client provide document 14: enter 0 or 1', #
-                              min_value=0., max_value=1., value=0., step=1.)
-    FLAG_DOCUMENT_16 = st.number_input('Did client provide document 16: enter 0 or 1', #
-                              min_value=0., max_value=1., value=0., step=1.)
-    FLAG_DOCUMENT_21 = st.number_input('Did client provide document 21: enter 0 or 1', #
-                              min_value=0., max_value=1., value=0., step=1.)
-    CNT_CHILDREN = st.number_input('Number of children the client has', 
-                              min_value=0., value=0., step=1.)
-    CNT_FAM_MEMBERS = st.number_input('How many family members does client have', 
-                              min_value=1., value=1., step=1.)
-    CODE_GENDER = st.text_input('Gender of the client: please enter M for masculin or F for feminin', 'M')
-
-
-    columns = ["NAME_INCOME_TYPE", "AMT_ANNUITY", "EXT_SOURCE_1", "EXT_SOURCE_2", "EXT_SOURCE_3", "DAYS_EMPLOYED_PERC", "CREDIT_TERM", 
-    "STATUS_0_SUM", "STATUS_1_SUM", "STATUS_2_SUM", "STATUS_3_SUM", "STATUS_4_SUM", "STATUS_5_SUM", "STATUS_C_SUM", "STATUS_X_SUM", 
-    "CREDIT_ACTIVE_Active_SUM", "CREDIT_ACTIVE_Bad_debt_SUM", "CREDIT_ACTIVE_Closed_SUM", "CREDIT_ACTIVE_Sold_SUM", 
-    "CREDIT_TYPE_Another_type_of_loan_SUM", "CREDIT_TYPE_Cash_loan_(non-earmarked)_SUM", "CREDIT_TYPE_Consumer_credit_SUM", "CREDIT_TYPE_Credit_card_SUM", "CREDIT_TYPE_Microloan_SUM", "CREDIT_TYPE_Unknown_type_of_loan_SUM", 
-    "DAYS_BIRTH", "FLAG_EMP_PHONE", "FLAG_WORK_PHONE", "FLAG_PHONE", "REGION_RATING_CLIENT_W_CITY", "REG_CITY_NOT_LIVE_CITY", "REG_CITY_NOT_WORK_CITY", "LIVE_CITY_NOT_WORK_CITY", "FLAG_DOCUMENT_2", "FLAG_DOCUMENT_3", "FLAG_DOCUMENT_6", "FLAG_DOCUMENT_9", 
-    "FLAG_DOCUMENT_13", "FLAG_DOCUMENT_14", "FLAG_DOCUMENT_16", "FLAG_DOCUMENT_21", "F_AGE", "M_AGE", "CNT_ADULTS"]
     
-    DAYS_EMPLOYED_PERC = DAYS_EMPLOYED/DAYS_BIRTH # for the scatterplot
-    data = [[NAME_INCOME_TYPE, AMT_ANNUITY, EXT_SOURCE_1, EXT_SOURCE_2, EXT_SOURCE_3, DAYS_EMPLOYED_PERC, AMT_CREDIT/AMT_ANNUITY, *[int(i == STATUS) for i in status_unique], *[int(i==CREDIT_ACTIVE) for i in credit_active_unique], *[int(i==CREDIT_TYPE) for i in credit_type_unique], 
-    DAYS_BIRTH, FLAG_EMP_PHONE, FLAG_WORK_PHONE, FLAG_PHONE, REGION_RATING_CLIENT_W_CITY, int(REG_CITY != LIVE_CITY), int(REG_CITY != WORK_CITY), int(LIVE_CITY != WORK_CITY), FLAG_DOCUMENT_2, FLAG_DOCUMENT_3, FLAG_DOCUMENT_6, FLAG_DOCUMENT_9, FLAG_DOCUMENT_13, FLAG_DOCUMENT_14, 
-    FLAG_DOCUMENT_16, FLAG_DOCUMENT_21, DAYS_BIRTH if CODE_GENDER == 'F' else 0, DAYS_BIRTH if CODE_GENDER == 'M' else 0, CNT_FAM_MEMBERS - CNT_CHILDREN]]
     
-    data_for_shap = pd.DataFrame(data, columns=columns)
+    if input_choice == "Input just the client's number":
+#       in real job we retrieve the client's data from a remote server, but for study purposes I store them here
+        clients_database = pd.DataFrame(pd.DataFrame([['Working', 9.296013353714333, 0.4, 0.6120885096567825, 0.7530673920730478, 0.6872367312552654, 1.3565791038427395, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 9.0, 2.0, 0.0, 7.0, 0.0, 0.0, 0.0, 8.0, 1.0, 0.0, 0.0, 23740.0, 1.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 23740.0, 0.0, 1.0],
+        ['Working', 10.554952994101429, 0.4133100212686366, 0.5821345097931376, 0.7922644738669378, 0.012742472201931662, 1.3250169173409996, 16.0, 0.0, 0.0, 0.0, 0.0, 0.0, 42.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 12321.0, 1.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 12321.0, 0.0, 2.0],
+        ['Working', 9.715017130155296, 0.4, 0.4487012673963373, 0.4,0.08444731924680178, 1.3104015327308003, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 13914.0, 1.0, 1.0, 0.0, 3.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 13914.0, 2.0]], 
+        index=[40449, 160246, 43761],
+        columns = ["NAME_INCOME_TYPE", "AMT_ANNUITY", "EXT_SOURCE_1", "EXT_SOURCE_2", "EXT_SOURCE_3", "DAYS_EMPLOYED_PERC", "CREDIT_TERM", 
+        "STATUS_0_SUM", "STATUS_1_SUM", "STATUS_2_SUM", "STATUS_3_SUM", "STATUS_4_SUM", "STATUS_5_SUM", "STATUS_C_SUM", "STATUS_X_SUM", 
+        "CREDIT_ACTIVE_Active_SUM", "CREDIT_ACTIVE_Bad_debt_SUM", "CREDIT_ACTIVE_Closed_SUM", "CREDIT_ACTIVE_Sold_SUM", 
+        "CREDIT_TYPE_Another_type_of_loan_SUM", "CREDIT_TYPE_Cash_loan_(non-earmarked)_SUM", "CREDIT_TYPE_Consumer_credit_SUM", "CREDIT_TYPE_Credit_card_SUM", "CREDIT_TYPE_Microloan_SUM", "CREDIT_TYPE_Unknown_type_of_loan_SUM", 
+        "DAYS_BIRTH", "FLAG_EMP_PHONE", "FLAG_WORK_PHONE", "FLAG_PHONE", "REGION_RATING_CLIENT_W_CITY", "REG_CITY_NOT_LIVE_CITY", "REG_CITY_NOT_WORK_CITY", "LIVE_CITY_NOT_WORK_CITY", "FLAG_DOCUMENT_2", "FLAG_DOCUMENT_3", "FLAG_DOCUMENT_6", "FLAG_DOCUMENT_9", 
+        "FLAG_DOCUMENT_13", "FLAG_DOCUMENT_14", "FLAG_DOCUMENT_16", "FLAG_DOCUMENT_21", "F_AGE", "M_AGE", "CNT_ADULTS"]
+        ))
+       
+        CLIENT_INDEX = st.selectbox('Select client index', clients_database.index.values)
+        data = clients_database.loc[CLIENT_INDEX, :].values.tolist() # TypeError: Object of type ndarray is not JSON serializable
+
+        columns = clients_database.columns.tolist() # TypeError: Object of type ndarray is not JSON serializable
+        # columns = [x.replace("'", '"') for x in columns] # TypeError: Object of type ndarray is not JSON serializable
+        # st.write(columns)   # for debugging
+
+       
+     #   for i in range(clients_database.shape[1]): # or for i in range(len(columns)):
+     #       st.write(f'{columns[i]}: {data[i]}')
         
+        # variables for plots
+#        CODE_GENDER = 'F' if data[-3] != 0 else 'M'
+        CODE_GENDER = 'F' if clients_database.loc[CLIENT_INDEX, 'F_AGE'] != 0 else 'M' # if the columns order changes later, I can assign all the variables this way
+        DAYS_BIRTH = clients_database.loc[CLIENT_INDEX, 'DAYS_BIRTH']
+#        DAYS_EMPLOYED_PERC = data[5]
+        DAYS_EMPLOYED_PERC = clients_database.loc[CLIENT_INDEX, 'DAYS_EMPLOYED_PERC']
+#        AMT_CREDIT = data[1] * data[6]
+        AMT_CREDIT = clients_database.loc[CLIENT_INDEX, 'AMT_ANNUITY'] * clients_database.loc[CLIENT_INDEX, 'CREDIT_TERM']
+        
+        data = [data] # a crutch for building a shap plot
+
+    if input_choice == "Input all values manually":
+        NAME_INCOME_TYPE = st.selectbox('Select income type',
+            ('Working', 'State servant', 'Commercial associate', 'Pensioner', 'Unemployed', 'Student', 'Businessman', 'Maternity leave'))
+    #    st.write('You selected:', option)
+        AMT_ANNUITY = st.number_input('Loan annuity	natural logarithm: enter any positive float number',
+                                       min_value=0., max_value=100., value=12., step=1.)
+        AMT_CREDIT = st.number_input('Credit amount of the loan	natural logarithm: enter any positive float number',
+                                       min_value=0., max_value=100., value=12., step=1.)
+        EXT_SOURCE_1 = st.number_input('Normalized score from external data source 1: enter any float number between 0 and 1',
+                                       min_value=0., max_value=1., value=0., step=1.)
+        EXT_SOURCE_2 = st.number_input('Normalized score from external data source 2: enter any float number between 0 and 1',
+                                       min_value=0., max_value=1., value=0., step=1.)
+        EXT_SOURCE_3 = st.number_input('Normalized score from external data source 3: enter any float number between 0 and 1',
+                                       min_value=0., max_value=1., value=0., step=1.)
+        DAYS_BIRTH = st.number_input('Client age in days at the time of application: enter any positive integer number',
+                                       min_value=0., max_value=50000., value=16500., step=1.)
+        DAYS_EMPLOYED = st.number_input('How many days before the application the person started current employment: enter any positive float number',
+                                       min_value=0., max_value=50000., value=0., step=1.)
+        status_unique = ['0', '1', '2', '3', '4', '5', 'C', 'X']
+        STATUS = st.selectbox('Status of Credit Bureau loan during the month: active, closed, DPD0-30. C means closed, X means status unknown, 0 means no DPD, 1 means maximal did during month between 1-30, 2 means DPD 31-60... 5 means DPD 120+ or sold or written off )', status_unique, index=7)
+        credit_active_unique = ['Active', 'Bad_debt', 'Closed', 'Sold']
+        CREDIT_ACTIVE = st.selectbox('Status of the Credit Bureau (CB) reported credits', ['No reported credits', *credit_active_unique]) # if there were no credits before or another issue
+        credit_type_unique = ["Another_type_of_loan", "Cash_loan_(non-earmarked)", "Consumer_credit", "Credit_card", "Microloan", "Unknown_type_of_loan",]
+        CREDIT_TYPE = st.selectbox('Type of Credit Bureau credit (Car, cash,...) For no reported credits select unknown type of loan', credit_type_unique) # eventually I can fill all the columns with 0 when no reported credits. then I do as with CREDIT_ACTIVE
+        FLAG_EMP_PHONE = st.number_input('Did client provide work phone (1=YES, 0=NO): enter 0 or 1',
+                                  min_value=0., max_value=1., value=0., step=1.)
+        FLAG_WORK_PHONE = st.number_input('Did client provide home phone (1=YES, 0=NO): enter 0 or 1',
+                                  min_value=0., max_value=1., value=0., step=1.)
+        FLAG_PHONE = st.number_input('Did client provide home phone (again) (1=YES, 0=NO): enter 0 or 1',
+                                  min_value=0., max_value=1., value=0., step=1.)
+        REGION_RATING_CLIENT_W_CITY = st.number_input('Our rating of the region where client lives with taking city into account (1,2,3)',
+                                  min_value=1., max_value=3., value=2., step=1.)
+        REG_CITY = st.text_input('Registration city', 'Paris')
+        LIVE_CITY = st.text_input('Live city', 'Paris')
+        WORK_CITY = st.text_input('Work city', 'Paris')
+        FLAG_DOCUMENT_2 = st.number_input('Did client provide document 2: enter 0 or 1', #
+                                  min_value=0., max_value=1., value=0., step=1.)
+        FLAG_DOCUMENT_3 = st.number_input('Did client provide document 3: enter 0 or 1', #
+                                  min_value=0., max_value=1., value=0., step=1.)
+        FLAG_DOCUMENT_6 = st.number_input('Did client provide document 6: enter 0 or 1', #
+                                  min_value=0., max_value=1., value=0., step=1.)
+        FLAG_DOCUMENT_9 = st.number_input('Did client provide document 9: enter 0 or 1', #
+                                  min_value=0., max_value=1., value=0., step=1.)
+        FLAG_DOCUMENT_13 = st.number_input('Did client provide document 13: enter 0 or 1', #
+                                  min_value=0., max_value=1., value=0., step=1.)
+        FLAG_DOCUMENT_14 = st.number_input('Did client provide document 14: enter 0 or 1', #
+                                  min_value=0., max_value=1., value=0., step=1.)
+        FLAG_DOCUMENT_16 = st.number_input('Did client provide document 16: enter 0 or 1', #
+                                  min_value=0., max_value=1., value=0., step=1.)
+        FLAG_DOCUMENT_21 = st.number_input('Did client provide document 21: enter 0 or 1', #
+                                  min_value=0., max_value=1., value=0., step=1.)
+        CNT_CHILDREN = st.number_input('Number of children the client has', 
+                                  min_value=0., value=0., step=1.)
+        CNT_FAM_MEMBERS = st.number_input('How many family members does client have', 
+                                  min_value=1., value=1., step=1.)
+        CODE_GENDER = st.text_input('Gender of the client: please enter M for masculin or F for feminin', 'M')
+
+        columns = ["NAME_INCOME_TYPE", "AMT_ANNUITY", "EXT_SOURCE_1", "EXT_SOURCE_2", "EXT_SOURCE_3", "DAYS_EMPLOYED_PERC", "CREDIT_TERM", 
+        "STATUS_0_SUM", "STATUS_1_SUM", "STATUS_2_SUM", "STATUS_3_SUM", "STATUS_4_SUM", "STATUS_5_SUM", "STATUS_C_SUM", "STATUS_X_SUM", 
+        "CREDIT_ACTIVE_Active_SUM", "CREDIT_ACTIVE_Bad_debt_SUM", "CREDIT_ACTIVE_Closed_SUM", "CREDIT_ACTIVE_Sold_SUM", 
+        "CREDIT_TYPE_Another_type_of_loan_SUM", "CREDIT_TYPE_Cash_loan_(non-earmarked)_SUM", "CREDIT_TYPE_Consumer_credit_SUM", "CREDIT_TYPE_Credit_card_SUM", "CREDIT_TYPE_Microloan_SUM", "CREDIT_TYPE_Unknown_type_of_loan_SUM", 
+        "DAYS_BIRTH", "FLAG_EMP_PHONE", "FLAG_WORK_PHONE", "FLAG_PHONE", "REGION_RATING_CLIENT_W_CITY", "REG_CITY_NOT_LIVE_CITY", "REG_CITY_NOT_WORK_CITY", "LIVE_CITY_NOT_WORK_CITY", "FLAG_DOCUMENT_2", "FLAG_DOCUMENT_3", "FLAG_DOCUMENT_6", "FLAG_DOCUMENT_9", 
+        "FLAG_DOCUMENT_13", "FLAG_DOCUMENT_14", "FLAG_DOCUMENT_16", "FLAG_DOCUMENT_21", "F_AGE", "M_AGE", "CNT_ADULTS"]
+#        st.write(columns)  # for debugging
+
+        DAYS_EMPLOYED_PERC = DAYS_EMPLOYED/DAYS_BIRTH # for the scatterplot
+        data = [[NAME_INCOME_TYPE, AMT_ANNUITY, EXT_SOURCE_1, EXT_SOURCE_2, EXT_SOURCE_3, DAYS_EMPLOYED_PERC, AMT_CREDIT/AMT_ANNUITY, *[int(i == STATUS) for i in status_unique], *[int(i==CREDIT_ACTIVE) for i in credit_active_unique], *[int(i==CREDIT_TYPE) for i in credit_type_unique], 
+        DAYS_BIRTH, FLAG_EMP_PHONE, FLAG_WORK_PHONE, FLAG_PHONE, REGION_RATING_CLIENT_W_CITY, int(REG_CITY != LIVE_CITY), int(REG_CITY != WORK_CITY), int(LIVE_CITY != WORK_CITY), FLAG_DOCUMENT_2, FLAG_DOCUMENT_3, FLAG_DOCUMENT_6, FLAG_DOCUMENT_9, FLAG_DOCUMENT_13, FLAG_DOCUMENT_14, 
+        FLAG_DOCUMENT_16, FLAG_DOCUMENT_21, DAYS_BIRTH if CODE_GENDER == 'F' else 0, DAYS_BIRTH if CODE_GENDER == 'M' else 0, CNT_FAM_MEMBERS - CNT_CHILDREN]]
+
+       
     predict_btn = st.button('Predict')
     if predict_btn:
+        
 
         pred = None
 
@@ -125,7 +164,7 @@ def main():
         st.write(
             'The predicted flag of the credit default is {:.1f}'.format(pred))
 
-# Graphics    
+# Graphics / plots   
     if plot_choice == 'Sex-age default probability':
         st.write("Default probability for different ages and sexes:") 
         st.write("The distribution of clients who payed their credits (blue line) and those who had difficulties (orange line): represents the probability that a given client will fail the credit. The height is adjusted in a way that the area under the curves equals 1.")
@@ -140,9 +179,9 @@ def main():
         female_ok_y = np.array([7.53704542e-07, 1.92863396e-06, 4.63467409e-06, 1.04662718e-05, 2.22289696e-05, 4.44460577e-05, 8.37647382e-05, 0.000149019109, 0.000250692528, 0.000399638659, 0.000605174914, 0.000872967371, 0.00120332319, 0.00159045343, 0.00202295227, 0.00248530908, 0.00295995979, 0.00342934493, 0.00387764032, 0.00429208123, 0.00466393362, 0.00498913841, 0.00526857457, 0.00550789172, 0.00571699081, 0.00590938165, 0.00610166072, 0.00631314765, 0.00656536341, 0.00688073834, 0.00727994877, 0.00777773625, 0.00837788377, 0.00906887792, 0.00982219932, 0.0105947681, 0.0113357925, 0.0119965736, 0.0125404773, 0.0129499859, 0.0132287, 0.0133979593, 0.0134895794, 0.0135372975, 0.0135695241, 0.0136050839, 0.0136523196, 0.0137108134, 0.0137744389, 0.0138345413, 0.0138825309, 0.0139116977, 0.0139183611, 0.0139024927, 0.0138678179, 0.0138213282, 0.0137722069, 0.0137303713, 0.0137050115, 0.0137035343, 0.0137311697, 0.0137912183, 0.0138856541, 0.0140156456, 0.0141816058, 0.0143826124, 0.0146153864, 0.0148733252, 0.0151461997, 0.0154209392, 0.0156834907, 0.0159212406, 0.0161251813, 0.0162910706, 0.0164192477, 0.0165133288, 0.0165784213, 0.0166195554, 0.0166407573, 0.016644776, 0.0166332035, 0.0166067352, 0.0165655104, 0.0165096317, 0.0164399089, 0.0163586329, 0.0162699794, 0.016179659, 0.0160937202, 0.0160168092, 0.0159504918, 0.0158922961, 0.0158359463, 0.0157728854, 0.0156947454, 0.0155960315, 0.0154760988, 0.0153396459, 0.0151954515, 0.0150537672, 0.0149233441, 0.0148092188, 0.0147120212, 0.0146288738, 0.0145552759, 0.0144870376, 0.0144214694, 0.0143575145, 0.0142950562, 0.0142339753, 0.0141735436, 0.0141124585, 0.0140494525, 0.0139841264, 0.0139176122, 0.0138528257, 0.0137943077, 0.0137477864, 0.0137195867, 0.0137159232, 0.013742088, 0.0138016463, 0.0138958837, 0.0140237538, 0.0141823564, 0.0143676529, 0.0145749327, 0.0147986609, 0.0150317289, 0.015264572, 0.0154848458, 0.0156782389, 0.0158305934, 0.0159309699, 0.0159747913, 0.0159659276, 0.0159166882, 0.0158452734, 0.0157711869, 0.0157100494, 0.0156696956, 0.0156490413, 0.0156400987, 0.0156321899, 0.0156165276, 0.0155893046, 0.0155522127, 0.0155104698, 0.015469416, 0.0154311605, 0.0153925567, 0.0153451696, 0.0152771834, 0.0151766216, 0.0150349295, 0.0148498814, 0.0146269265, 0.0143784677, 0.0141211425, 0.0138718237, 0.0136435329, 0.0134425214, 0.0132673343, 0.0131098672, 0.0129576338, 0.0127960824, 0.0126100568, 0.0123842593, 0.0121033965, 0.0117530493, 0.0113219182, 0.0108051441, 0.0102074494, 0.00954449128, 0.00884134367, 0.00812813693, 0.00743401362, 0.00678115767, 0.00618057588, 0.00563073878, 0.00511941263, 0.0046282233, 0.00413877481, 0.00363863596, 0.00312543272, 0.0026078091, 0.00210305353, 0.00163233335, 0.00121523331, 0.00086534179, 0.000588018758, 0.000380561258, 0.000234181543, 0.00013680991, 7.57734197e-05, 3.97366245e-05, 1.9706812e-05, 9.23216314e-06, 4.08127805e-06, 1.70087533e-06])
         female_fail_x = np.array([15.79818607, 16.09133457, 16.38448306, 16.67763156, 16.97078005, 17.26392855, 17.55707704, 17.85022554, 18.14337403, 18.43652253, 18.72967102, 19.02281952, 19.31596801, 19.60911651, 19.902265, 20.1954135, 20.48856199, 20.78171049, 21.07485898, 21.36800748, 21.66115597, 21.95430447, 22.24745296, 22.54060146, 22.83374995, 23.12689845, 23.42004694, 23.71319544, 24.00634393, 24.29949243, 24.59264092, 24.88578942, 25.17893791, 25.47208641, 25.7652349, 26.0583834, 26.35153189, 26.64468039, 26.93782888, 27.23097738, 27.52412587, 27.81727437, 28.11042286, 28.40357136, 28.69671985, 28.98986835, 29.28301684, 29.57616534, 29.86931383, 30.16246233, 30.45561082, 30.74875932, 31.04190781, 31.33505631, 31.6282048, 31.9213533, 32.21450179, 32.50765029, 32.80079878, 33.09394728, 33.38709577, 33.68024427, 33.97339276, 34.26654126, 34.55968975, 34.85283825, 35.14598674, 35.43913524, 35.73228373, 36.02543223, 36.31858072, 36.61172922, 36.90487771, 37.19802621, 37.4911747, 37.7843232, 38.07747169, 38.37062019, 38.66376868, 38.95691718, 39.25006568, 39.54321417, 39.83636267, 40.12951116, 40.42265966, 40.71580815, 41.00895665, 41.30210514, 41.59525364, 41.88840213, 42.18155063, 42.47469912, 42.76784762, 43.06099611, 43.35414461, 43.6472931, 43.9404416, 44.23359009, 44.52673859, 44.81988708, 45.11303558, 45.40618407, 45.69933257, 45.99248106, 46.28562956, 46.57877805, 46.87192655, 47.16507504, 47.45822354, 47.75137203, 48.04452053, 48.33766902, 48.63081752, 48.92396601, 49.21711451, 49.510263, 49.8034115, 50.09655999, 50.38970849, 50.68285698, 50.97600548, 51.26915397, 51.56230247, 51.85545096, 52.14859946, 52.44174795, 52.73489645, 53.02804494, 53.32119344, 53.61434193, 53.90749043, 54.20063892, 54.49378742, 54.78693591, 55.08008441, 55.3732329, 55.6663814, 55.95952989, 56.25267839, 56.54582688, 56.83897538, 57.13212387, 57.42527237, 57.71842086, 58.01156936, 58.30471785, 58.59786635, 58.89101484, 59.18416334, 59.47731183, 59.77046033, 60.06360882, 60.35675732, 60.64990581, 60.94305431, 61.2362028, 61.5293513, 61.82249979, 62.11564829, 62.40879678, 62.70194528, 62.99509377, 63.28824227, 63.58139076, 63.87453926, 64.16768775, 64.46083625, 64.75398474, 65.04713324, 65.34028173, 65.63343023, 65.92657872, 66.21972722, 66.51287571, 66.80602421, 67.0991727, 67.3923212, 67.68546969, 67.97861819, 68.27176668, 68.56491518, 68.85806367, 69.15121217, 69.44436066, 69.73750916, 70.03065765, 70.32380615, 70.61695464, 70.91010314, 71.20325163, 71.49640013, 71.78954862, 72.08269712, 72.37584561, 72.66899411, 72.9621426, 73.2552911, 73.54843959, 73.84158809, 74.13473658])
         female_fail_y = np.array([5.20668477e-07, 9.04605272e-07, 1.53244984e-06, 2.5318417e-06, 4.08047155e-06, 6.41674934e-06, 9.84839758e-06, 1.47565459e-05, 2.15925534e-05, 3.08648625e-05, 4.31138693e-05, 5.88741633e-05, 7.8625495e-05, 0.000102736238, 0.00013140552, 0.000164612089, 0.000202078829, 0.000243261223, 0.000287365874, 0.000333401524, 0.000380260412, 0.000426822989, 0.000472074831, 0.000515221727, 0.000555787998, 0.000593684229, 0.00062923363, 0.000663150791, 0.000696472101, 0.000730442886, 0.000766371935, 0.000805468769, 0.00084868247, 0.000896562217, 0.000949158653, 0.00100598125, 0.00106602012, 0.00112783193, 0.00118967962, 0.00124970728, 0.00130612508, 0.00135737767, 0.00140227293, 0.00144005518, 0.00147041774, 0.00149346053, 0.00150960735, 0.00151950277, 0.00152390895, 0.00152361942, 0.00151939986, 0.00151195877, 0.00150194383, 0.00148995557, 0.00147656768, 0.00146234471, 0.00144785033, 0.00143364302, 0.00142025992, 0.00140819196, 0.00139785515, 0.00138956319, 0.0013835054, 0.00137973331, 0.00137815698, 0.00137855136, 0.00138057172, 0.0013837769, 0.00138765857, 0.00139167479, 0.00139528552, 0.00139798774, 0.0013993472, 0.00139902408, 0.00139678989, 0.00139253407, 0.00138626011, 0.0013780723, 0.00136815576, 0.00135675287, 0.00134413959, 0.00133060419, 0.00131643012, 0.00130188324, 0.00128720291, 0.00127259575, 0.00125823076, 0.00124423511, 0.00123069037, 0.00121762982, 0.00120503767, 0.00119285119, 0.0011809665, 0.00116924811, 0.00115754148, 0.00114568746, 0.00113353721, 0.0011209659, 0.00110788428, 0.00109424718, 0.00108005865, 0.00106537336, 0.00105029435, 0.00103496664, 0.00101956713, 0.00100429097, 0.000989335817, 0.000974885887, 0.000961098317, 0.000948094217, 0.000935956201, 0.000924732795, 0.000914448544, 0.000905117224, 0.000896754692, 0.00088938787, 0.000883057157, 0.000877810987, 0.00087369292, 0.000870723274, 0.000868878503, 0.000868072217, 0.000868141835, 0.00086884433, 0.000869863446, 0.000870829123, 0.000871347876, 0.000871040739, 0.000869583574, 0.000866743503, 0.00086240536, 0.000856583493, 0.000849416854, 0.000841148432, 0.000832093035, 0.000822599409, 0.000813013157, 0.000803645919, 0.000794754101, 0.000786527832, 0.000779088597, 0.000772492732, 0.000766737801, 0.000761769784, 0.000757490234, 0.000753763704, 0.000750426259, 0.000747295583, 0.000744182348, 0.000740901468, 0.000737281138, 0.000733167488, 0.00072842338, 0.000722921166, 0.000716530729, 0.00070910548, 0.000700469769, 0.000690411259, 0.000678681204, 0.000665004324, 0.000649098467, 0.00063070252, 0.000609609563, 0.000585700968, 0.000558976537, 0.000529575734, 0.000497785873, 0.000464034725, 0.000428867214, 0.000392908413, 0.000356817409, 0.000321238254, 0.000286754809, 0.000253855541, 0.00022291239, 0.000194175143, 0.000167779933, 0.000143768114, 0.000122110478, 0.000102731661, 8.5530594e-05, 7.03945985e-05, 5.72066316e-05, 4.5846856e-05, 3.61906958e-05, 2.81058066e-05, 2.14499934e-05, 1.60713072e-05, 1.18106382e-05, 8.50634912e-06, 6.00001532e-06, 4.14219776e-06, 2.79732236e-06, 1.84705826e-06, 1.19196377e-06, 7.51499382e-07, 4.62735914e-07, 2.78193387e-07, 1.63249177e-07, 9.34839198e-08])
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15,6), sharey=True)
+        fig, (ax1, ax2) = matplotlib.pyplot.subplots(1, 2, figsize=(15,6), sharey=True)
 
-        fig, (ax_male, ax_female) = plt.subplots(1, 2, figsize=(15,6), sharey=True)
+        fig, (ax_male, ax_female) = matplotlib.pyplot.subplots(1, 2, figsize=(15,6), sharey=True)
         ax_male.plot(male_ok_x, male_ok_y, label='Credit ok')
         ax_male.plot(male_fail_x, male_fail_y, label='Credit fail')
         ax_female.plot(female_ok_x, female_ok_y, label='Credit ok')
@@ -177,9 +216,9 @@ def main():
         female_ok_y = np.array([1.23098564e-06, 3.1499355e-06, 7.56956726e-06, 1.70940064e-05, 3.63053966e-05, 7.25913876e-05, 0.000136808502, 0.000243385004, 0.000409442804, 0.000652708617, 0.000988400076, 0.00142577129, 0.00196532391, 0.0025976032, 0.0033039806, 0.00405912344, 0.00483434526, 0.0056009671, 0.00633314418, 0.00701002853, 0.00761735531, 0.00814849504, 0.00860488329, 0.00899574728, 0.00933725773, 0.00965147948, 0.00996551868, 0.0103109291, 0.0107228597, 0.0112379448, 0.011889954, 0.0127029639, 0.013683153, 0.0148117171, 0.016042077, 0.0173038726, 0.0185141484, 0.0195933671, 0.0204816962, 0.0211505249, 0.0216057338, 0.0218821759, 0.0220318142, 0.0221097497, 0.0221623838, 0.0222204616, 0.0222976091, 0.0223931441, 0.0224970601, 0.0225952222, 0.0226736011, 0.0227212376, 0.0227321207, 0.0227062036, 0.0226495711, 0.0225736419, 0.0224934147, 0.0224250869, 0.0223836681, 0.0223812555, 0.0224263908, 0.022524465, 0.022678702, 0.0228910103, 0.0231620643, 0.0234903577, 0.0238705351, 0.0242918128, 0.0247374843, 0.0251862017, 0.0256150131, 0.0260033174, 0.0263364029, 0.0266073412, 0.026816686, 0.0269703437, 0.0270766557, 0.0271438379, 0.027178466, 0.0271850294, 0.0271661286, 0.0271228994, 0.0270555691, 0.0269643055, 0.0268504309, 0.0267176871, 0.026572894, 0.0264253786, 0.0262850193, 0.0261594046, 0.0260510918, 0.0259560439, 0.0258640109, 0.0257610169, 0.0256333949, 0.0254721707, 0.025276291, 0.0250534297, 0.0248179247, 0.0245865192, 0.0243735061, 0.0241871113, 0.0240283636, 0.0238925634, 0.0237723599, 0.0236609098, 0.0235538207, 0.0234493667, 0.0233473567, 0.0232475966, 0.0231488967, 0.0230491296, 0.0229462252, 0.0228395317, 0.0227308975, 0.0226250851, 0.0225295108, 0.02245353, 0.022407473, 0.0224014895, 0.0224442232, 0.0225414966, 0.0226954094, 0.0229042529, 0.0231632902, 0.0234659251, 0.0238044642, 0.0241698676, 0.0245505251, 0.0249308154, 0.025290577, 0.0256064356, 0.0258552682, 0.0260192078, 0.0260907789, 0.0260763023, 0.0259958822, 0.0258792443, 0.0257582426, 0.0256583901, 0.0255924823, 0.0255587487, 0.0255441433, 0.0255312263, 0.0255056458, 0.025461184, 0.0254006038, 0.0253324272, 0.0252653763, 0.0252028957, 0.0251398461, 0.0250624513, 0.0249514129, 0.0247871707, 0.0245557526, 0.0242535233, 0.023889383, 0.0234835884, 0.0230633127, 0.0226561136, 0.0222832583, 0.0219549569, 0.0216688331, 0.0214116504, 0.0211630157, 0.0208991624, 0.0205953367, 0.0202265535, 0.0197678352, 0.0191956319, 0.0184914882, 0.0176474686, 0.0166712854, 0.0155885112, 0.0144400975, 0.0132752548, 0.01214158, 0.011075305, 0.0100944066, 0.00919638687, 0.008361265, 0.00755903154, 0.00675964129, 0.00594279105, 0.00510460342, 0.00425919622, 0.00343480574, 0.00266600345, 0.00198477608, 0.00141331683, 0.000960379836, 0.000621550509, 0.000382476288, 0.000223444367, 0.000123756706, 6.48997204e-05, 3.21860903e-05, 1.50784022e-05, 6.66573487e-06, 2.77794942e-06])
         female_fail_x = np.array([15.79818607, 16.09133457, 16.38448306, 16.67763156, 16.97078005, 17.26392855, 17.55707704, 17.85022554, 18.14337403, 18.43652253, 18.72967102, 19.02281952, 19.31596801, 19.60911651, 19.902265, 20.1954135, 20.48856199, 20.78171049, 21.07485898, 21.36800748, 21.66115597, 21.95430447, 22.24745296, 22.54060146, 22.83374995, 23.12689845, 23.42004694, 23.71319544, 24.00634393, 24.29949243, 24.59264092, 24.88578942, 25.17893791, 25.47208641, 25.7652349, 26.0583834, 26.35153189, 26.64468039, 26.93782888, 27.23097738, 27.52412587, 27.81727437, 28.11042286, 28.40357136, 28.69671985, 28.98986835, 29.28301684, 29.57616534, 29.86931383, 30.16246233, 30.45561082, 30.74875932, 31.04190781, 31.33505631, 31.6282048, 31.9213533, 32.21450179, 32.50765029, 32.80079878, 33.09394728, 33.38709577, 33.68024427, 33.97339276, 34.26654126, 34.55968975, 34.85283825, 35.14598674, 35.43913524, 35.73228373, 36.02543223, 36.31858072, 36.61172922, 36.90487771, 37.19802621, 37.4911747, 37.7843232, 38.07747169, 38.37062019, 38.66376868, 38.95691718, 39.25006568, 39.54321417, 39.83636267, 40.12951116, 40.42265966, 40.71580815, 41.00895665, 41.30210514, 41.59525364, 41.88840213, 42.18155063, 42.47469912, 42.76784762, 43.06099611, 43.35414461, 43.6472931, 43.9404416, 44.23359009, 44.52673859, 44.81988708, 45.11303558, 45.40618407, 45.69933257, 45.99248106, 46.28562956, 46.57877805, 46.87192655, 47.16507504, 47.45822354, 47.75137203, 48.04452053, 48.33766902, 48.63081752, 48.92396601, 49.21711451, 49.510263, 49.8034115, 50.09655999, 50.38970849, 50.68285698, 50.97600548, 51.26915397, 51.56230247, 51.85545096, 52.14859946, 52.44174795, 52.73489645, 53.02804494, 53.32119344, 53.61434193, 53.90749043, 54.20063892, 54.49378742, 54.78693591, 55.08008441, 55.3732329, 55.6663814, 55.95952989, 56.25267839, 56.54582688, 56.83897538, 57.13212387, 57.42527237, 57.71842086, 58.01156936, 58.30471785, 58.59786635, 58.89101484, 59.18416334, 59.47731183, 59.77046033, 60.06360882, 60.35675732, 60.64990581, 60.94305431, 61.2362028, 61.5293513, 61.82249979, 62.11564829, 62.40879678, 62.70194528, 62.99509377, 63.28824227, 63.58139076, 63.87453926, 64.16768775, 64.46083625, 64.75398474, 65.04713324, 65.34028173, 65.63343023, 65.92657872, 66.21972722, 66.51287571, 66.80602421, 67.0991727, 67.3923212, 67.68546969, 67.97861819, 68.27176668, 68.56491518, 68.85806367, 69.15121217, 69.44436066, 69.73750916, 70.03065765, 70.32380615, 70.61695464, 70.91010314, 71.20325163, 71.49640013, 71.78954862, 72.08269712, 72.37584561, 72.66899411, 72.9621426, 73.2552911, 73.54843959, 73.84158809, 74.13473658])
         female_fail_y = np.array([1.12993143e-05, 1.96313389e-05, 3.32565407e-05, 5.49448958e-05, 8.85525678e-05, 0.000139253423, 0.000213725518, 0.000320239958, 0.000468591934, 0.000669815437, 0.000935637902, 0.00127766075, 0.00170629531, 0.00222953587, 0.00285170379, 0.00357233791, 0.00438542433, 0.00527914621, 0.00623628561, 0.00723533071, 0.00825224132, 0.00926272153, 0.0102447568, 0.0111811114, 0.0120614625, 0.0128838695, 0.0136553467, 0.0143914018, 0.0151145259, 0.0158517447, 0.0166314608, 0.0174799228, 0.0184177273, 0.0194567921, 0.0205982164, 0.0218313549, 0.0231342918, 0.0244757039, 0.0258178947, 0.0271205883, 0.028344942, 0.0294572028, 0.0304314997, 0.0312514332, 0.0319103479, 0.0324104121, 0.0327608233, 0.0329755692, 0.0330711902, 0.033064907, 0.032973336, 0.0328118526, 0.032594513, 0.0323343491, 0.032043811, 0.0317351507, 0.0314206001, 0.0311122794, 0.0308218454, 0.0305599518, 0.0303356271, 0.0301556785, 0.0300242151, 0.0299423549, 0.0299081463, 0.0299167049, 0.0299605499, 0.0300301071, 0.0301143454, 0.0302015036, 0.0302798622, 0.0303385044, 0.0303680068, 0.0303609947, 0.0303125092, 0.0302201513, 0.0300839966, 0.0299063085, 0.0296911041, 0.0294436437, 0.0291699159, 0.0288761769, 0.0285685775, 0.0282528875, 0.0279343016, 0.0276173036, 0.0273055611, 0.0270018336, 0.0267078917, 0.0264244576, 0.0261511885, 0.0258867228, 0.0256288065, 0.0253744993, 0.0251204472, 0.0248631968, 0.0245995174, 0.0243267004, 0.0240428089, 0.0237468628, 0.0234389495, 0.0231202561, 0.022793018, 0.022460383, 0.0221261898, 0.0217946734, 0.0214701232, 0.0211565373, 0.0208573257, 0.0205751165, 0.0203117027, 0.0200681374, 0.0198449532, 0.019642449, 0.0194609691, 0.0193010976, 0.0191637113, 0.0190498613, 0.0189604928, 0.0188960469, 0.0188560125, 0.0188385149, 0.0188400257, 0.0188552709, 0.0188773873, 0.018898344, 0.0189096017, 0.0189029364, 0.0188713137, 0.0188096797, 0.0187155353, 0.0185891917, 0.0184336645, 0.0182542269, 0.0180577107, 0.0178516843, 0.0176436478, 0.0174403642, 0.0172473979, 0.0170688751, 0.0169074322, 0.0167642916, 0.0166394007, 0.016531587, 0.0164387141, 0.0163578426, 0.0162854149, 0.0162174744, 0.0161499124, 0.0160787122, 0.0160001454, 0.0159108728, 0.0158079183, 0.0156885117, 0.0155498293, 0.0153886899, 0.0152012815, 0.0149829962, 0.0147284358, 0.0144316263, 0.0140864445, 0.0136872239, 0.013229474, 0.0127106203, 0.0121306587, 0.0114926156, 0.0108027263, 0.010070274, 0.00930708439, 0.00852672259, 0.00774349177, 0.00697136885, 0.00622302455, 0.00550905937, 0.00483754494, 0.00421390207, 0.00364108503, 0.00311999128, 0.00264998696, 0.00222943654, 0.00185614668, 0.00152767208, 0.00124147272, 0.000994947956, 0.000785394287, 0.000609939639, 0.000465498159, 0.000348772318, 0.000256309185, 0.000184600983, 0.000130209648, 8.98921225e-05, 6.07062382e-05, 4.0084032e-05, 2.58674644e-05, 1.63087033e-05, 1.00420878e-05, 6.03722841e-06, 3.54276059e-06, 2.0287462e-06])
-        fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(15,6), sharey=True)
+        fig, (ax1, ax2) = matplotlib.pyplot.subplots(1, 2, figsize=(15,6), sharey=True)
 
-        fig, (ax_male, ax_female) = plt.subplots(1, 2, figsize=(15,6), sharey=True)
+        fig, (ax_male, ax_female) = matplotlib.pyplot.subplots(1, 2, figsize=(15,6), sharey=True)
         ax_male.plot(male_ok_x, male_ok_y, label='Credit ok')
         ax_male.plot(male_fail_x, male_fail_y, label='Credit fail')
         ax_female.plot(female_ok_x, female_ok_y, label='Credit ok')
@@ -188,13 +227,13 @@ def main():
         ax_male.set_title('Male gender')
         ax_male.set_xlabel('Years birth')
         ax_male.set_ylabel('Density')
-#        ax = plt.gca() #gca means "get current axes"
+#        ax = matplotlib.pyplot.gca() #gca means "get current axes"
 #        ax.legend(loc='top right')
         ax_male.legend(loc='upper right')#, bbox_to_anchor=(1, 0))
 
         ax_female.set_title('Female gender')
         ax_female.set_xlabel('Years birth')
-#        ax = plt.gca() #gca means "get current axes"
+#        ax = matplotlib.pyplot.gca() #gca means "get current axes"
 #        ax.legend(loc='top right')
         ax_female.legend(loc='upper right')#, bbox_to_anchor=(1, 0))
 
@@ -214,18 +253,20 @@ def main():
         employed_fail = np.array([0.02581284, 0.08957469, 0.04685763, 0.30540517, 0.03761322, 0.1340983, 0.11698888, 0.14721574, 0.11296249, 0.1176061, 0.1369211, 0.09047071, 0.09319287, 0.09229865, 0.15274773, 0.06692389, 0.09196526, 0.10289773, 0.08199454, 0.09108325, 0.0295136, 0.07048458, 0.04734725, 0.17449405, 0.53406622, 0.11373656, 0.18607346, 0.29320028, 0.05151041, 0.08743474, 0.10749817, 0.00969883, 0.15577342, 0.10582879, 0.24700569, 0.0674199, 0.05073095, 0.11884252, 0.0119223, 0.12291697, 0.25520226, 0.05126872, 0.30508753, 0.04471898, 0.16885506, 0.11644629, 0.01926497, 0.16914822, 0.02507709, 0.27746291, 0.02017024, 0.1050504, 0.09334397, 0.30870504, 0.07343494, 0.20033927, 0.03430952, 0.10609083, 0.09891427, 0.02575711, 0.00742521, 0.09504883, 0.07494577, 0.03801113, 0.06822206, 0.02513234, 0.12204639, 0.02089382, 0.01852933, 0.11356327, 0.06960951, 0.06104891, 0.1094265, 0.10572507, 0.12716825, 0.02544116, 0.0435442, 0.09198564, 0.05072031, 0.09529649, 0.14448935, 0.03791301, 0.20167696, 0.01447326, 0.4059537, 0.23796909, 0.04586264, 0.10705908, 0.50060569, 0.01231455, 0.25812412, 0.23471302, 0.16499875, 0.01129974, 0.09785495, 0.10149657, 0.07422393, 0.10543583, 0.14434269, 0.02804149, 0.10572507, 0.10892179, 0.19822822, 0.01823819, 0.42557173, 0.02473476, 0.14062669, 0.17299678, 0.14442448, 0.06314751, 0.09395098, 0.28302738, 0.22238039, 0.33438202, 0.08272383, 0.03762023, 0.15624154, 0.24897912, 0.11524227, 0.29617754, 0.11711526, 0.01907459, 0.12606421, 0.0105445, 0.17092729, 0.14105903, 0.14504184, 0.09835025, 0.14185215, 0.11204817, 0.03725023, 0.08160181, 0.16885653, 0.1330973, 0.36008475, 0.14576602, 0.09682428, 0.02739271, 0.03920183, 0.07421875, 0.26022268, 0.08682188, 0.10700625, 0.00795117, 0.10783718, 0.18513211, 0.26731901, 0.32558805, 0.05802417, 0.21130952, 0.01190258, 0.35756914, 0.11589549, 0.42683618, 0.2983884, 0.05046609, 0.00865438, 0.13191153, 0.0798276, 0.06416477, 0.15772172, 0.03297355, 0.10343319, 0.09273245, 0.20307068, 0.0346392, 0.02072789, 0.19102053, 0.11550457, 0.03106946, 0.09506065, 0.03325231, 0.0827379, 0.06215654, 0.01925977, 0.02430953, 0.03384968, 0.02561118, 0.07958697, 0.10381151, 0.11824598, 0.1038249, 0.0337799, 0.13227425, 0.03933818, 0.4338919, 0.02355576, 0.02738788, 0.11851773, 0.1395853, 0.05016662, 0.17862203, 0.02075297, 0.10094246, 0.27729168, 0.14476561, 0.00654731, 0.06354655, 0.19336373, 0.41517241, 0.12564765, 0.02144798, 0.11601582, 0.02741764, 0.026143, 0.26731458, 0.34445261, 0.16204624, 0.16775021, 0.10476776, 0.06274427, 0.05211416, 0.0589815, 0.11170707, 0.01783011, 0.01202355, 0.25397412, 0.23465224, 0.04489188, 0.06027037, 0.12889712, 0.08968775, 0.11057296, 0.28300836, 0.02937726, 0.10159167, 0.22336946, 0.39616253, 0.23663961, 0.20379084, 0.00531632, 0.04148804, 0.11009829, 0.12529782, 0.27124032, 0.06824653, 0.270113, 0.05208808, 0.02234637, 0.07046367, 0.10097237, 0.0743865, 0.17567696, 0.08157444, 0.01898734, 0.01599327, 0.04639292, 0.08312177, 0.01684933, 0.10834784, 0.16071064, 0.09795759, 0.10392974, 0.01974192, 0.05423903, 0.05215956, 0.09791238, 0.49805764, 0.11414048, 0.08428993, 0.09933653, 0.01296868, 0.02852984, 0.02050309, 0.24020201, 0.00707382, 0.10799952, 0.2492905, 0.06252354, 0.01687149, 0.16961709, 0.16126825, 0.21377556, 0.04314612, 0.01033755, 0.07976299, 0.08491556, 0.06481481, 0.02733289, 0.10376618, 0.34261278, 0.20011374, 0.05381396, 0.01951592, 0.03198834, 0.12471811, 0.06572082, 0.03656402, 0.09956479, 0.08887531, 0.56633019, 0.00772706, 0.09182423, 0.03435728, 0.24867866, 0.29275544, 0.0417159, 0.09027829, 0.15123882, 0.09950644, 0.0489502, 0.18068025, 0.16898544, 0.08505316, 0.0727534, 0.02413002, 0.09943392, 0.05707912, 0.24158034, 0.11331051, 0.04357322, 0.20047093, 0.03352821, 0.05910871, 0.01549071, 0.24164934, 0.05074862, 0.11689849, 0.02946742, 0.10204369, 0.05138297, 0.142303, 0.10596514, 0.26483489, 0.08158016, 0.13071629, 0.21100593, 0.05433503, 0.18716073, 0.13005714, 0.09892863, 0.11404109, 0.05222415, 0.01010338, 0.02101079, 0.36965626, 0.03565551, 0.10502522, 0.12045701, 0.02944444, 0.30389811, 0.0295922, 0.04907532, 0.16260944, 0.15111311, 0.15655563, 0.29275474, 0.05306172, 0.09036251, 0.3422125, 0.11666843, 0.00617284, 0.03486506, 0.21234423, 0.17970858, 0.19696822, 0.11367151, 0.00940024, 0.03063998, 0.01989189, 0.11097811, 0.06785149, 0.14430621, 0.09648353, 0.20370164, 0.27752893, 0.07824989, 0.1203098, 0.13325472, 0.30284801, 0.04783818, 0.03259818, 0.10721308, 0.1061638, 0.19376187, 0.03608168, 0.11009321, 0.23761493, 0.15925035, 0.04511208, 0.12359031, 0.26053499, 0.0145808, 0.09069012, 0.53241743, 0.0645712, 0.08307065, 0.10884072, 0.13099445, 0.00577307, 0.06299393, 0.10257948, 0.08791005, 0.15486839, 0.16283166, 0.07546786, 0.04958251, 0.24335421, 0.14263, 0.27262333, 0.11195903, 0.11873793, 0.20850958, 0.11733919, 0.2000556, 0.02149784, 0.10622943, 0.13266134, 0.09345324, 0.2003815, 0.06869221, 0.18564619, 0.07011374, 0.4269627, 0.08179942, 0.12796591, 0.24115456, 0.01981474, 0.3025039, 0.01566618, 0.10973258, 0.00880519, 0.0296395, 0.14241683, 0.0691501, 0.08443629, 0.04728839, 0.20985231, 0.02003854, 0.15646824, 0.08777559, 0.10400599, 0.11005064, 0.07047054, 0.20877042, 0.04039317, 0.02931149, 0.10667126, 0.11419396, 0.04011709, 0.19393794, 0.01141805, 0.18220445, 0.20689333, 0.06245214, 0.01393215, 0.10344665, 0.06632774, 0.53472729, 0.04551551, 0.0153834, 0.0961103, 0.30663864, 0.1089434, 0.10294658, 0.1112849, 0.20278076, 0.08438212, 0.13991724, 0.35164938, 0.01166798, 0.06807525, 0.11047054, 0.0482282, 0.13687935, 0.01543636, 0.07531267, 0.11734895, 0.15197433, 0.2302979, 0.02906649, 0.34903304, 0.08156579, 0.12896041, 0.15554187, 0.16593637, 0.11286726, 0.00817871, 0.02322731, 0.0174703, 0.11035673, 0.1441284, 0.18520911, 0.10942148, 0.05661605, 0.39020135, 0.06817802, 0.32755604, 0.06470631, 0.0150153, 0.04327666, 0.10401506, 0.45793975, 0.10543583, 0.00726485, 0.14019326])
         credit_fail = np.array([11.6307085, 13.3534751, 13.42246797, 12.55813698, 12.57071576, 12.41916586, 12.88294562, 12.95331731, 12.83978824, 13.1462049, 11.96718074, 13.53472465, 12.32385568, 13.71015004, 13.09322289, 13.52602887, 14.06887289, 13.93329359, 13.9871907, 13.20940675, 13.27068338, 13.29220741, 13.01700286, 13.53472465, 12.807232, 13.5076972, 13.36934845, 13.44922025, 12.10071213, 13.89080354, 13.92332406, 12.32385568, 11.81303006, 13.15881488, 13.53472465, 11.41870269, 12.10071213, 13.1640426, 13.11140354, 13.20861447, 13.89080354, 14.48766824, 13.54124607, 12.44784166, 12.73446752, 13.30713194, 13.56950771, 13.50841322, 12.5549674, 12.85852282, 13.0126735, 13.97251431, 13.20861447, 14.04318782, 12.77490582, 13.01700286, 12.50617724, 12.32385568, 12.74781537, 13.36934845, 13.71015004, 12.50450918, 13.01700286, 12.54786286, 13.56818893, 11.81303006, 12.32385568, 11.81303006, 13.1640426, 13.20861447, 12.86617997, 13.14674082, 12.4198747, 12.54936443, 13.01700286, 14.30791454, 14.1080936, 14.00361039, 14.49408812, 12.82970896, 13.75607897, 11.81303006, 12.58421794, 13.75607897, 13.3534751, 12.32385568, 12.66032792, 13.58275408, 12.73446752, 13.01700286, 12.92093239, 13.12088529, 11.50287513, 12.16462546, 12.92093239, 13.37467731, 12.30079174, 13.01700286, 13.06579303, 12.44784166, 11.81303006, 13.20760669, 12.50450918, 13.21945379, 14.16418307, 12.92306574, 12.94089905, 13.20861447, 13.1640426, 13.09322289, 14.01682559, 13.45089992, 13.6229241, 13.56950771, 13.38164598, 13.75727215, 12.17600511, 13.36934845, 11.58821845, 11.91341823, 13.69467086, 12.80268277, 13.01700286, 12.44784166, 12.74658425, 13.31370909, 13.87203077, 12.44823028, 13.63564199, 12.81248477, 14.04376105, 13.93329359, 13.60312147, 13.27936713, 12.44784166, 12.37591668, 10.83840375, 13.14098884, 13.20861447, 12.34248115, 13.43773746, 12.66032792, 11.81303006, 13.75607897, 13.63564199, 13.83994948, 13.60312147, 14.06887289, 13.27896705, 13.08465216, 12.65746669, 12.32385568, 13.78544303, 11.31039304, 13.10317138, 12.44784166, 12.50450918, 13.60372229, 12.73173122, 13.00983725, 13.53472465, 12.50617724, 12.74781537, 12.10071213, 12.55813698, 13.85138915, 12.50617724, 13.1640426, 13.42246797, 13.01700286, 11.98288534, 12.52467182, 12.85852282, 13.4567148, 13.5825212, 14.06887289, 12.10071213, 13.36934845, 12.26198028, 13.75607897, 12.33499343, 12.59530166, 12.10071213, 12.10071213, 13.02695319, 12.41916586, 13.19765636, 13.42079991, 12.32385568, 13.89080354, 13.4752881, 13.1640426, 13.57614997, 12.96887298, 14.06887289, 13.20861447, 14.04376105, 12.96495139, 12.10071213, 13.89080354, 12.59699248, 12.71239163, 12.44784166, 12.59559128, 13.0964146, 13.42246797, 13.27896705, 13.01700286, 13.01700286, 12.14664106, 12.48251618, 12.78138179, 13.71015004, 13.00695253, 13.65151407, 12.48251618, 12.50617724, 12.84591794, 12.55813698, 13.60312147, 12.55813698, 13.60312147, 13.3631708, 12.59243138, 14.61313464, 12.85193952, 13.1567648, 13.29220741, 12.50385788, 13.30380455, 14.04376105, 12.58621995, 11.69462183, 13.56950771, 14.15651714, 12.79385931, 13.53472465, 12.85852282, 13.42640687, 14.06887289, 12.66032792, 12.69778884, 12.44784166, 12.75316752, 13.20861447, 13.69767252, 13.20861447, 12.40900533, 13.89080354, 13.17398952, 13.24013041, 13.11739104, 12.50617724, 13.20861447, 11.67131287, 13.24644653, 12.59906023, 13.06824715, 12.00210653, 13.01700286, 12.28136563, 13.13921164, 12.93553247, 12.91164235, 11.93701604, 13.01700286, 13.19932442, 12.44784166, 13.42246797, 11.91341823, 12.44784166, 12.50617724, 13.60312147, 12.98547091, 12.50450918, 13.36934845, 14.26976583, 12.50617724, 13.498688, 13.6229241, 14.06887289, 13.82240672, 12.50617724, 12.16462546, 13.92332406, 13.20861447, 12.14950229, 12.10071213, 12.50617724, 12.44784166, 13.27936713, 13.11739104, 12.91164235, 12.10071213, 13.75656596, 13.47991893, 13.14383814, 12.50617724, 13.58083831, 12.44784166, 13.60174044, 13.54763111, 13.60312147, 12.55210617, 12.03232622, 12.76071609, 14.04376105, 12.14664106, 12.32385568, 13.19128385, 12.55813698, 14.11561515, 13.06579303, 12.44784166, 13.01700286, 13.97251431, 13.03680549, 13.26902149, 13.39940403, 12.65321698, 13.01700286, 12.49069128, 13.51452438, 13.42246797, 13.18504799, 13.60312147, 12.61518111, 12.32385568, 12.32385568, 13.63564199, 13.19692153, 13.22456972, 13.01700286, 13.17001575, 12.78128053, 13.65873569, 12.52467182, 13.75607897, 12.91164235, 12.32385568, 14.04555028, 12.61398476, 12.4831133, 13.54797223, 13.1640426, 12.04731135, 12.17303279, 12.32006852, 13.06579303, 13.01700286, 11.83843786, 13.36934845, 12.99828884, 12.50450918, 12.58239726, 13.21270122, 13.48017068, 13.35047775, 12.60656541, 12.74781537, 12.32385568, 13.05778966, 13.42246797, 12.3043874, 13.0126735, 13.85718978, 12.50450918, 13.36934845, 12.84264947, 12.59906023, 13.01700286, 14.51555391, 13.67389054, 13.54137038, 13.71015004, 13.29220741, 13.61407957, 13.19765636, 13.01700286, 13.20177142, 13.57614997, 13.66843181, 12.52916107, 13.85718978, 13.90802091, 12.10071213, 13.20861447, 13.00152367, 13.68623638, 13.82240672, 13.26398793, 12.55813698, 13.92332406, 13.82156171, 13.01203052, 13.87042195, 12.91164235, 13.70018051, 12.61077746, 13.42246797, 13.1640426, 13.20861447, 13.29220741, 12.96309563, 13.24013041, 12.86617997, 12.50450918, 13.23108145, 14.06887289, 13.53560616, 13.01700286, 13.36934845, 13.92332406, 12.38212459, 13.42246797, 14.23120022, 12.50617724, 14.25119444, 13.01700286, 12.5549674, 12.61886584, 13.1567648, 13.71015004, 11.69435913, 13.20861447, 13.08398839, 13.08466151, 14.08714709, 12.66443376, 12.99680015, 11.78996612, 14.06887289, 12.47089542, 12.5011982, 13.42246797, 12.44784166, 13.25935278, 13.89080354, 13.63591129, 12.10071213, 12.40900533, 12.10071213, 13.01700286, 13.75894021, 13.27560622, 12.50617724, 12.55468165, 13.80546022, 13.33706984, 13.1640426, 14.1080936, 12.44784166, 13.3219402, 12.44784166, 12.55813698, 12.00464166, 12.18353558, 12.41916586, 12.44784166, 13.26398793, 13.71015004, 13.54763111, 13.22230825, 12.74045853, 12.23694612, 13.05868209, 13.36934845, 13.06845614, 13.20861447, 13.60312147, 12.55813698, 12.90731076, 12.58621995, 13.20861447, 13.71015004, 12.50450918, 12.7020044, 12.69778884, 14.40329722, 13.217819, 12.91164235, 13.7051375, 13.13921164, 13.16087807, 12.87257807, 13.5341286, 13.1868469, 13.20861447, 14.07286421, 12.65344716, 12.40731409, 13.56950771, 13.56950771, 13.1640426, 13.63564199, 12.11184987])
         
-        fig = plt.figure(figsize=(15,7))
+        fig = matplotlib.pyplot.figure(figsize=(15,7))
 #        ax = sns.scatterplot(x=annuity_ok, y=credit_term_ok, alpha=0.3)
 #        sns.scatterplot(x=annuity_fail, y=credit_term_ok, alpha=0.05, ax=ax)
-        plt.scatter(x=employed_ok, y=credit_ok, alpha=1, label='Payment ok')
-        plt.scatter(x=employed_fail, y=credit_fail, alpha=0.5, label='Payment problems')
-        plt.scatter(x=DAYS_EMPLOYED_PERC, y=AMT_CREDIT, s=120, c='red', label='Current client')
-        plt.xlabel("Client's life part on current employment", fontsize=16)
-        plt.ylabel('Credit duration', fontsize=16)
-        plt.legend()
+        matplotlib.pyplot.scatter(x=employed_ok, y=credit_ok, alpha=1, label='Payment ok')
+        matplotlib.pyplot.scatter(x=employed_fail, y=credit_fail, alpha=0.5, label='Payment problems')
+        matplotlib.pyplot.scatter(x=DAYS_EMPLOYED_PERC, y=AMT_CREDIT, s=120, c='red', label='Current client')
+        matplotlib.pyplot.xlabel("Client's life part on current employment", fontsize=16)
+        matplotlib.pyplot.ylabel('Credit duration', fontsize=16)
+        matplotlib.pyplot.legend()
         st.pyplot(fig)
 
     if plot_choice == 'Decision plot for the individual client':
+    #    st.write(len(data)) # for debugging
+        data_for_shap = pd.DataFrame(data, columns=columns)
         test_columntransformer = joblib.load('credit_scoring_transformer.pkl')
         X_test_trfm = test_columntransformer.transform(data_for_shap)
     #    st.write('Shape of data for shap:', X_test_trfm.shape) # for debugging
@@ -237,7 +278,7 @@ def main():
         shap_vals = linear_explainer.shap_values(X_test_trfm[0])
     #    st.write("Prediction From Adding SHAP Values to Base Value:", linear_explainer.expected_value + shap_vals.sum())
 
-        fig_shap = plt.figure()
+        fig_shap = matplotlib.pyplot.figure()
         st.pyplot(fig_shap, shap.decision_plot(linear_explainer.expected_value,
                        linear_explainer.shap_values(X_test_trfm[0]),
                        link='logit',
