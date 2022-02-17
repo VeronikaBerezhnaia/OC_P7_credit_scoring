@@ -1,9 +1,8 @@
-mlflow==1.23.1
-shap==0.40.0
-streamlit==1.5.0
+mlflow
+shap
+streamlit
 pandas
 requests
-matplotlib
+matplotlib.pyplot
 numpy
 joblib
-
