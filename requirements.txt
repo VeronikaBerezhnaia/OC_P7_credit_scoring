@@ -3,6 +3,6 @@ shap
 streamlit
 pandas
 requests
-matplotlib.pyplot
+matplotlib
 numpy
 joblib
