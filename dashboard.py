@@ -3,7 +3,7 @@ import streamlit as st
 import requests
 
 # import matplotlib.pyplot as plt
-import matplotlib.pyplot
+import matplotlib
 import numpy as np
 import shap
 import joblib
@@ -26,10 +26,9 @@ def request_prediction(model_uri, columns, data):
 
 def main():
     MLFLOW_URI = 'http://127.0.0.1:5000/invocations'
-#    CORTEX_URI = 'http://0.0.0.0:8890/'
+    HEROKU_APP = 'http://modelheart.herokuapp.com/predict'
 #    RAY_SERVE_URI = 'http://127.0.0.1:8000/regressor'
 
-#    api_choice = st.sidebar.selectbox('Which API doyou want to use', ['MLflow', 'Cortex', 'Ray Serve'])
 
     st.title('Credit default prediction')
     
@@ -41,10 +40,11 @@ def main():
     'Decision plot for the individual client',
     'Global feature importances'], index=0)
     
-    
+    api_choice = st.sidebar.selectbox('Where do you want to send the request?', ["Remote server", "My computer ONLY FOR TEST AND DEBUG"], index=0)
+   
     if input_choice == "Input just the client's number":
 #       in real job we retrieve the client's data from a remote server, but for study purposes I store them here
-        clients_database = pd.DataFrame(pd.DataFrame([['Working', 9.296013353714333, 0.4, 0.6120885096567825, 0.7530673920730478, 0.6872367312552654, 1.3565791038427395, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 9.0, 2.0, 0.0, 7.0, 0.0, 0.0, 0.0, 8.0, 1.0, 0.0, 0.0, 23740.0, 1.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 23740.0, 0.0, 1.0],
+        clients_database = pd.DataFrame([['Working', 9.296013353714333, 0.4, 0.6120885096567825, 0.7530673920730478, 0.6872367312552654, 1.3565791038427395, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 9.0, 2.0, 0.0, 7.0, 0.0, 0.0, 0.0, 8.0, 1.0, 0.0, 0.0, 23740.0, 1.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 23740.0, 0.0, 1.0],
         ['Working', 10.554952994101429, 0.4133100212686366, 0.5821345097931376, 0.7922644738669378, 0.012742472201931662, 1.3250169173409996, 16.0, 0.0, 0.0, 0.0, 0.0, 0.0, 42.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 12321.0, 1.0, 0.0, 0.0, 2.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 12321.0, 0.0, 2.0],
         ['Working', 9.715017130155296, 0.4, 0.4487012673963373, 0.4,0.08444731924680178, 1.3104015327308003, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, 13914.0, 1.0, 1.0, 0.0, 3.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 13914.0, 2.0]], 
         index=[40449, 160246, 43761],
@@ -54,7 +54,7 @@ def main():
         "CREDIT_TYPE_Another_type_of_loan_SUM", "CREDIT_TYPE_Cash_loan_(non-earmarked)_SUM", "CREDIT_TYPE_Consumer_credit_SUM", "CREDIT_TYPE_Credit_card_SUM", "CREDIT_TYPE_Microloan_SUM", "CREDIT_TYPE_Unknown_type_of_loan_SUM", 
         "DAYS_BIRTH", "FLAG_EMP_PHONE", "FLAG_WORK_PHONE", "FLAG_PHONE", "REGION_RATING_CLIENT_W_CITY", "REG_CITY_NOT_LIVE_CITY", "REG_CITY_NOT_WORK_CITY", "LIVE_CITY_NOT_WORK_CITY", "FLAG_DOCUMENT_2", "FLAG_DOCUMENT_3", "FLAG_DOCUMENT_6", "FLAG_DOCUMENT_9", 
         "FLAG_DOCUMENT_13", "FLAG_DOCUMENT_14", "FLAG_DOCUMENT_16", "FLAG_DOCUMENT_21", "F_AGE", "M_AGE", "CNT_ADULTS"]
-        ))
+        )
        
         CLIENT_INDEX = st.selectbox('Select client index', clients_database.index.values)
         data = clients_database.loc[CLIENT_INDEX, :].values.tolist() # TypeError: Object of type ndarray is not JSON serializable
@@ -155,14 +155,17 @@ def main():
 
         pred = None
 
-#        if api_choice == 'MLflow':
-        pred = request_prediction(MLFLOW_URI, columns, data)[0]
-#        elif api_choice == 'Cortex':
-#            pred = request_prediction(CORTEX_URI, columns, data)[0]
+        if api_choice == 'My computer ONLY FOR TEST AND DEBUG':
+            pred = request_prediction(MLFLOW_URI, columns, data)[0]
+            st.write('The predicted flag of the credit default is {:.1f}'.format(pred))
+        elif api_choice == 'Remote server':
+            pred = request_prediction(HEROKU_APP, columns, data)
+            st.write('The predicted probability of credit fail is', round(pred['predictions'], 3))
 #        elif api_choice == 'Ray Serve':
 #            pred = request_prediction(RAY_SERVE_URI, columns, data)[0]
-        st.write(
-            'The predicted flag of the credit default is {:.1f}'.format(pred))
+#        st.write('The predicted flag of the credit default is {:.3f}'.format(pred))
+        
+        
 
 # Graphics / plots   
     if plot_choice == 'Sex-age default probability':
