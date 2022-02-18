@@ -3,7 +3,7 @@ import streamlit as st
 import requests
 
 # import matplotlib.pyplot as plt
-import matplotlib
+import matplotlib.pyplot
 import numpy as np
 import shap
 import joblib
