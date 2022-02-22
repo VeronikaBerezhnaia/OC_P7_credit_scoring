@@ -4,6 +4,8 @@ import requests
 
 # import matplotlib.pyplot as plt
 import matplotlib
+import plotly
+# import plotly
 import numpy as np
 import shap
 import joblib
@@ -34,13 +36,16 @@ def main():
     
     input_choice = st.sidebar.selectbox('How do you want to input the data?', ["Input just the client's number", "Input all values manually"], index=0)
    
-    plot_choice = st.sidebar.selectbox('Which plot do you want to display?', ['Sex-age default probability', 
+    plot_choice = st.sidebar.selectbox('Which plot do you want to display?', [
+    'Interactive Employed vs Annuity',
+    'Interactive Income Type Histograms',
+    'Sex-age default probability', 
     'Sex-age distribution default cients', 
     'Employed vs credit amount scatterplot',
     'Decision plot for the individual client',
     'Global feature importances'], index=0)
     
-    api_choice = st.sidebar.selectbox('Where do you want to send the request?', ["Remote server", "My computer ONLY FOR TEST AND DEBUG"], index=0)
+    api_choice = st.sidebar.selectbox('Where do you want to send the request?', ["Remote server", "My computer ONLY TEST&DEBUG"], index=0)
    
     if input_choice == "Input just the client's number":
 #       in real job we retrieve the client's data from a remote server, but for study purposes I store them here
@@ -263,7 +268,7 @@ def main():
         matplotlib.pyplot.scatter(x=employed_fail, y=credit_fail, alpha=0.5, label='Payment problems')
         matplotlib.pyplot.scatter(x=DAYS_EMPLOYED_PERC, y=AMT_CREDIT, s=120, c='red', label='Current client')
         matplotlib.pyplot.xlabel("Client's life part on current employment", fontsize=16)
-        matplotlib.pyplot.ylabel('Credit duration', fontsize=16)
+        matplotlib.pyplot.ylabel('Credit amount', fontsize=16)
         matplotlib.pyplot.legend()
         st.pyplot(fig)
 
@@ -294,5 +299,29 @@ def main():
 
     if plot_choice == 'Global feature importances':
         st.image('shap_summary_plot.png', caption='Importance on the most relavant features on the set of all customers')
+        
+    if plot_choice == 'Interactive Employed vs Annuity':
+        df_plotly = pd.read_csv('df_plotly.csv')
+        df_plotly['TARGET'] = df_plotly.TARGET.apply(str)
+        
+        fig_plotly = plotly.express.scatter(df_plotly, x='DAYS_EMPLOYED_PERC', y='AMT_CREDIT',
+                 hover_data=['CODE_GENDER', 'YEARS_BIRTH'],
+                 color='TARGET', marginal_x='rug', marginal_y='rug')
+        st.plotly_chart(fig_plotly, use_container_width=True)
+
+                 
+    if plot_choice == 'Interactive Income Type Histograms':
+        df_plotly = pd.read_csv('df_plotly.csv')
+        df_plotly['TARGET'] = df_plotly.TARGET.apply(str)
+        
+        fig_plotly1 = plotly.express.histogram(df_plotly, x='NAME_INCOME_TYPE', #y='YEARS_BIRTH', doesn't change nothing
+             color='TARGET', barmode='group',
+             histfunc='count')
+        st.plotly_chart(fig_plotly1, use_container_width=True)
+        
+        fig_plotly2 = plotly.express.histogram(df_plotly, x='NAME_INCOME_TYPE', y='YEARS_BIRTH',
+             color='TARGET', barmode='group',
+              histfunc='avg')
+        st.plotly_chart(fig_plotly2, use_container_width=True)
 if __name__ == '__main__':
     main()
