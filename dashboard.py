@@ -4,7 +4,8 @@ import requests
 
 # import matplotlib.pyplot as plt
 import matplotlib
-import plotly
+from plotly import express
+
 # import plotly
 import numpy as np
 import shap
@@ -304,7 +305,7 @@ def main():
         df_plotly = pd.read_csv('df_plotly.csv')
         df_plotly['TARGET'] = df_plotly.TARGET.apply(str)
         
-        fig_plotly = plotly.express.scatter(df_plotly, x='DAYS_EMPLOYED_PERC', y='AMT_CREDIT',
+        fig_plotly = express.scatter(df_plotly, x='DAYS_EMPLOYED_PERC', y='AMT_CREDIT',
                  hover_data=['CODE_GENDER', 'YEARS_BIRTH'],
                  color='TARGET', marginal_x='rug', marginal_y='rug')
         st.plotly_chart(fig_plotly, use_container_width=True)
@@ -314,12 +315,12 @@ def main():
         df_plotly = pd.read_csv('df_plotly.csv')
         df_plotly['TARGET'] = df_plotly.TARGET.apply(str)
         
-        fig_plotly1 = plotly.express.histogram(df_plotly, x='NAME_INCOME_TYPE', #y='YEARS_BIRTH', doesn't change nothing
+        fig_plotly1 = express.histogram(df_plotly, x='NAME_INCOME_TYPE', #y='YEARS_BIRTH', doesn't change nothing
              color='TARGET', barmode='group',
              histfunc='count')
         st.plotly_chart(fig_plotly1, use_container_width=True)
         
-        fig_plotly2 = plotly.express.histogram(df_plotly, x='NAME_INCOME_TYPE', y='YEARS_BIRTH',
+        fig_plotly2 = express.histogram(df_plotly, x='NAME_INCOME_TYPE', y='YEARS_BIRTH',
              color='TARGET', barmode='group',
               histfunc='avg')
         st.plotly_chart(fig_plotly2, use_container_width=True)
