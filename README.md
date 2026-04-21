@@ -1,5 +1,6 @@
 # OC_P7_credit_scoring
 The 7th project of the Data Science Master studies program.
+
 You are a data scientist at a financial company called "Prêt à dépenser," which offers consumer loans to people with little or no credit history. The company wants to develop a scoring model to assess the probability of customer default to support the decision on whether or not to grant a loan to a potential customer, drawing on various data sources (behavioral data, data from other financial institutions, etc.). In addition, customer relationship managers have reported that customers are increasingly demanding transparency regarding credit approval decisions. This demand for transparency from customers is fully in line with the values the company seeks to embody. It therefore decided to develop an interactive dashboard so that customer relationship managers could both explain credit approval decisions as transparently as possible and allow their customers to access their personal information and explore it easily.
 
 The raw data were taken from https://www.kaggle.com/c/home-credit-default-risk/data
